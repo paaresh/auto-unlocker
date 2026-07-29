@@ -3,8 +3,7 @@ name: Build
 on:
   workflow_dispatch:
   push:
-    branches:
-      - master
+    branches: [ master ]
 
 jobs:
   build:
@@ -13,27 +12,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install vcpkg
-        shell: cmd
+      - name: Clone vcpkg
+        shell: pwsh
         run: |
-          git clone https://github.com/microsoft/vcpkg C:\vcpkg
-          C:\vcpkg\bootstrap-vcpkg.bat
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          & C:\vcpkg\bootstrap-vcpkg.bat
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          C:\vcpkg\vcpkg install zlib:x64-windows
           C:\vcpkg\vcpkg install curl:x64-windows
           C:\vcpkg\vcpkg install libzip:x64-windows
 
       - name: Configure
-        shell: cmd
+        shell: pwsh
         run: |
-          cmake -B build -A x64 ^
-          -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
+          cmake `
+            -B build `
+            -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
 
       - name: Build
-        shell: cmd
+        shell: pwsh
         run: |
           cmake --build build --config Release
 
-      - name: Upload
+      - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
           name: Unlocker
-          path: build/**/*.exe
+          path: |
+            build/**/*.exe
