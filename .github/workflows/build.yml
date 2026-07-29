@@ -1,45 +1,39 @@
-name: Build Auto-Unlocker
+name: Build
 
 on:
-  push:
-    branches: [ master, main ]
-  pull_request:
   workflow_dispatch:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
+      - name: Install vcpkg
+        shell: cmd
+        run: |
+          git clone https://github.com/microsoft/vcpkg C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg install curl:x64-windows
+          C:\vcpkg\vcpkg install libzip:x64-windows
 
-    - name: Setup CMake
-      uses: lukka/get-cmake@latest
+      - name: Configure
+        shell: cmd
+        run: |
+          cmake -B build -A x64 ^
+          -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
 
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
+      - name: Build
+        shell: cmd
+        run: |
+          cmake --build build --config Release
 
-    - name: Install dependencies
-      run: |
-        vcpkg install curl:x64-windows-static
-        vcpkg install libzip:x64-windows-static
-
-    - name: Configure
-      run: |
-        cmake -B build `
-          -A x64 `
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-
-    - name: Build
-      run: |
-        cmake --build build --config Release
-
-    - name: Upload executable
-      uses: actions/upload-artifact@v4
-      with:
-        name: Auto-Unlocker
-        path: |
-          build/**/*.exe
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Unlocker
+          path: build/**/*.exe
