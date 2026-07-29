@@ -1,0 +1,45 @@
+name: Build Auto-Unlocker
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup CMake
+      uses: lukka/get-cmake@latest
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+
+    - name: Install dependencies
+      run: |
+        vcpkg install curl:x64-windows-static
+        vcpkg install libzip:x64-windows-static
+
+    - name: Configure
+      run: |
+        cmake -B build `
+          -A x64 `
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+    - name: Build
+      run: |
+        cmake --build build --config Release
+
+    - name: Upload executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: Auto-Unlocker
+        path: |
+          build/**/*.exe
